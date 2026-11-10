@@ -64,11 +64,21 @@ class _CalculadoraHomeState extends State<CalculadoraHome> {
 
   void _calculateResult() {
     String finalExpression = _expression;
-    // Adaptamos los símbolos visuales para que la librería los procese correctamente
+
+    // 1. Auto-cerrado de paréntesis si el usuario olvidó cerrar la función
+    int openBrackets = '('.allMatches(finalExpression).length;
+    int closeBrackets = ')'.allMatches(finalExpression).length;
+    while (openBrackets > closeBrackets) {
+      finalExpression += ')';
+      closeBrackets++;
+    }
+
+    // 2. Reemplazo de operadores para math_expressions
     finalExpression = finalExpression.replaceAll('x', '*');
     finalExpression = finalExpression.replaceAll('÷', '/');
     finalExpression = finalExpression.replaceAll('π', '3.141592653589793');
     finalExpression = finalExpression.replaceAll('√', 'sqrt');
+    finalExpression = finalExpression.replaceAll('ln(', 'ln(');
 
     try {
       Parser p = Parser();
@@ -78,7 +88,6 @@ class _CalculadoraHomeState extends State<CalculadoraHome> {
 
       setState(() {
         _result = eval.toString();
-        // Limpiamos decimales innecesarios si el resultado es entero
         if (_result.endsWith('.0')) {
           _result = _result.substring(0, _result.length - 2);
         }
@@ -97,22 +106,22 @@ class _CalculadoraHomeState extends State<CalculadoraHome> {
   }) {
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.all(4.0),
+        padding: const EdgeInsets.all(2.0),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: color,
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0),
+              borderRadius: BorderRadius.circular(8.0),
             ),
           ),
           onPressed: () => _buttonPressed(text),
           child: Text(
             text,
-            style: TextStyle(
-              fontSize: 16.0,
+            style: const TextStyle(
+              fontSize: 15.0,
               fontWeight: FontWeight.bold,
-              color: textColor,
+              color: Colors.white,
             ),
           ),
         ),
@@ -124,8 +133,9 @@ class _CalculadoraHomeState extends State<CalculadoraHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calculadora Adaptativa (Práctica 1)'),
+        title: const Text('Calculadora Adaptativa'),
         backgroundColor: const Color(0xFF1E1E1E),
+        toolbarHeight: 40,
       ),
       body: OrientationBuilder(
         builder: (context, orientation) {
@@ -133,41 +143,51 @@ class _CalculadoraHomeState extends State<CalculadoraHome> {
 
           return Column(
             children: <Widget>[
-              // Pantalla de visualización (Expresión ingresada y Resultado)
-              Container(
-                alignment: Alignment.bottomRight,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 20,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      _expression,
-                      style: const TextStyle(
-                        fontSize: 22.0,
-                        color: Colors.grey,
+              // Pantalla de resultados expandida proporcionalmente
+              Expanded(
+                flex: isLandscape ? 2 : 3,
+                child: Container(
+                  alignment: Alignment.bottomRight,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        reverse: true,
+                        child: Text(
+                          _expression,
+                          style: TextStyle(
+                            fontSize: isLandscape ? 18.0 : 24.0,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _result,
-                      style: const TextStyle(
-                        fontSize: 40.0,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                      const SizedBox(height: 4),
+                      Text(
+                        _result,
+                        style: TextStyle(
+                          fontSize: isLandscape ? 28.0 : 40.0,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              const Divider(color: Colors.grey),
+              const Divider(color: Colors.grey, height: 1),
 
-              // Panel adaptable: Muestra funciones científicas a la izquierda si está en horizontal
+              // Teclado adaptativo
               Expanded(
+                flex: isLandscape ? 5 : 7,
                 child: Row(
                   children: [
+                    // Panel científico (solo en modo landscape)
                     if (isLandscape)
                       Expanded(
                         flex: 1,
@@ -197,10 +217,19 @@ class _CalculadoraHomeState extends State<CalculadoraHome> {
                                 _buildButton("ln(", Colors.blueGrey),
                               ],
                             ),
+                            Row(
+                              children: [
+                                _buildButton(
+                                  ")",
+                                  Colors.blueGrey.shade700,
+                                ), // Botón de paréntesis de cierre
+                                _buildButton("(", Colors.blueGrey.shade700),
+                              ],
+                            ),
                           ],
                         ),
                       ),
-                    // Panel de teclado estándar
+                    // Panel estándar
                     Expanded(
                       flex: isLandscape ? 2 : 1,
                       child: Column(
